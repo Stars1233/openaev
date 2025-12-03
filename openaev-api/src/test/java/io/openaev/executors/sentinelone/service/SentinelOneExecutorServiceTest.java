@@ -1,4 +1,4 @@
-package io.openaev.executors.crowdstrike.service;
+package io.openaev.executors.sentinelone.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.mockito.ArgumentMatchers.any;
@@ -9,12 +9,10 @@ import io.openaev.config.cache.LicenseCacheManager;
 import io.openaev.database.model.*;
 import io.openaev.ee.Ee;
 import io.openaev.executors.ExecutorService;
-import io.openaev.executors.crowdstrike.client.CrowdStrikeExecutorClient;
-import io.openaev.executors.crowdstrike.config.CrowdStrikeExecutorConfig;
-import io.openaev.executors.crowdstrike.model.CrowdStrikeDevice;
-import io.openaev.executors.crowdstrike.model.CrowdStrikeHostGroup;
-import io.openaev.executors.crowdstrike.model.ResourcesGroups;
 import io.openaev.executors.model.AgentRegisterInput;
+import io.openaev.executors.sentinelone.client.SentinelOneExecutorClient;
+import io.openaev.executors.sentinelone.config.SentinelOneExecutorConfig;
+import io.openaev.executors.sentinelone.model.SentinelOneAgent;
 import io.openaev.service.AgentService;
 import io.openaev.service.AssetGroupService;
 import io.openaev.service.EndpointService;
@@ -30,12 +28,10 @@ import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
 @ExtendWith(MockitoExtension.class)
-public class CrowdstrikeExecutorServiceTest {
+public class SentinelOneExecutorServiceTest {
 
-  public static final String HOST_GROUP_CS = "hostGroupCs";
-
-  @Mock private CrowdStrikeExecutorClient client;
-  @Mock private CrowdStrikeExecutorConfig config;
+  @Mock private SentinelOneExecutorClient client;
+  @Mock private SentinelOneExecutorConfig config;
   @Mock private LicenseCacheManager licenseCacheManager;
   @Mock private AssetGroupService assetGroupService;
   @Mock private Ee eeService;
@@ -43,38 +39,31 @@ public class CrowdstrikeExecutorServiceTest {
   @Mock private AgentService agentService;
   @Mock private ExecutorService executorService;
 
-  @InjectMocks private CrowdStrikeExecutorService crowdStrikeExecutorService;
+  @InjectMocks private SentinelOneExecutorService sentinelOneExecutorService;
 
-  @InjectMocks private CrowdStrikeExecutorContextService crowdStrikeExecutorContextService;
+  @InjectMocks private SentinelOneExecutorContextService sentinelOneExecutorContextService;
 
-  private CrowdStrikeDevice crowdstrikeAgent;
-  private Executor crowdstrikeExecutor;
+  private SentinelOneAgent sentinelOneAgent;
+  private Executor sentinelOneExecutor;
 
   @BeforeEach
   void setUp() {
-    crowdstrikeAgent = CrowdstrikeDeviceFixture.createDefaultCrowdStrikeDevice();
-    crowdstrikeExecutor = new Executor();
-    crowdstrikeExecutor.setName(CrowdStrikeExecutorService.CROWDSTRIKE_EXECUTOR_NAME);
-    crowdstrikeExecutor.setType(CrowdStrikeExecutorService.CROWDSTRIKE_EXECUTOR_TYPE);
+    sentinelOneAgent = SentinelOneDeviceFixture.createDefaultSentinelOneAgent();
+    sentinelOneExecutor = new Executor();
+    sentinelOneExecutor.setName(SentinelOneExecutorService.SENTINELONE_EXECUTOR_NAME);
+    sentinelOneExecutor.setType(SentinelOneExecutorService.SENTINELONE_EXECUTOR_TYPE);
   }
 
   @Test
-  void test_run_crowdstrike() {
+  void test_run_sentinelone() {
     // Init datas
-    ResourcesGroups resourcesGroups = new ResourcesGroups();
-    CrowdStrikeHostGroup crowdstrikeHostGroup = new CrowdStrikeHostGroup();
-    crowdstrikeHostGroup.setId(HOST_GROUP_CS);
-    crowdstrikeHostGroup.setName("crowdstrike");
-    resourcesGroups.setResources(List.of(crowdstrikeHostGroup));
-    when(config.getHostGroup()).thenReturn(HOST_GROUP_CS);
-    when(client.hostGroup(HOST_GROUP_CS)).thenReturn(resourcesGroups);
-    when(client.devices(HOST_GROUP_CS)).thenReturn(List.of(crowdstrikeAgent));
+    when(client.agents()).thenReturn(Set.of(sentinelOneAgent));
     // Run method to test
-    crowdStrikeExecutorService.run();
+    sentinelOneExecutorService.run();
     // Asserts
     ArgumentCaptor<String> executorTypeCaptor = ArgumentCaptor.forClass(String.class);
     verify(agentService).getAgentsByExecutorType(executorTypeCaptor.capture());
-    assertEquals(crowdstrikeExecutor.getType(), executorTypeCaptor.getValue());
+    assertEquals(sentinelOneExecutor.getType(), executorTypeCaptor.getValue());
 
     ArgumentCaptor<List<AgentRegisterInput>> inputsCaptor = ArgumentCaptor.forClass(List.class);
     ArgumentCaptor<List<Agent>> agents = ArgumentCaptor.forClass(List.class);
@@ -83,20 +72,29 @@ public class CrowdstrikeExecutorServiceTest {
     assertEquals(0, agents.getValue().size());
 
     ArgumentCaptor<AssetGroup> assetGroupCaptor = ArgumentCaptor.forClass(AssetGroup.class);
-    verify(assetGroupService)
+    verify(assetGroupService, times(3))
         .createOrUpdateAssetGroupWithoutDynamicAssets(assetGroupCaptor.capture());
-    assertEquals(HOST_GROUP_CS, assetGroupCaptor.getValue().getExternalReference());
+    assertEquals(3, assetGroupCaptor.getAllValues().size());
+    assertEquals(
+        sentinelOneAgent.getAccountId(),
+        assetGroupCaptor.getAllValues().get(0).getExternalReference());
+    assertEquals(
+        sentinelOneAgent.getGroupId(),
+        assetGroupCaptor.getAllValues().get(1).getExternalReference());
+    assertEquals(
+        sentinelOneAgent.getSiteId(),
+        assetGroupCaptor.getAllValues().get(2).getExternalReference());
   }
 
   @Test
-  void test_launchBatchExecutorSubprocess_crowdstrike()
+  void test_launchBatchExecutorSubprocess_sentinelone()
       throws InterruptedException, JsonProcessingException {
     // Init datas
     when(licenseCacheManager.getEnterpriseEditionInfo()).thenReturn(null);
     doNothing().when(eeService).throwEEExecutorService(any(), any(), any());
     when(config.isEnable()).thenReturn(true);
     when(config.getApiBatchExecutionActionPagination()).thenReturn(1);
-    when(config.getWindowsScriptName()).thenReturn("MyScript");
+    when(config.getWindowsScriptId()).thenReturn("1234567890");
     Command payloadCommand =
         PayloadFixture.createCommand(
             "cmd",
@@ -114,24 +112,24 @@ public class CrowdstrikeExecutorServiceTest {
             InjectorContractFixture.createPayloadInjectorContract(injector, payloadCommand),
             "Inject",
             EndpointFixture.createEndpoint());
-    inject.setId("1234567890");
+    inject.setId("injectId");
     List<Agent> agents =
         List.of(AgentFixture.createAgent(EndpointFixture.createEndpoint(), "12345"));
     InjectStatus injectStatus = InjectStatusFixture.createPendingInjectStatus();
     when(executorService.manageWithoutPlatformAgents(agents, injectStatus)).thenReturn(agents);
     // Run method to test
-    crowdStrikeExecutorContextService.launchBatchExecutorSubprocess(
+    sentinelOneExecutorContextService.launchBatchExecutorSubprocess(
         inject, new HashSet<>(agents), injectStatus);
     // Asserts
     ArgumentCaptor<List<String>> agentIds = ArgumentCaptor.forClass(List.class);
     ArgumentCaptor<String> scriptName = ArgumentCaptor.forClass(String.class);
     ArgumentCaptor<String> commandEncoded = ArgumentCaptor.forClass(String.class);
     verify(client)
-        .executeAction(agentIds.capture(), scriptName.capture(), commandEncoded.capture());
+        .executeScript(agentIds.capture(), scriptName.capture(), commandEncoded.capture());
     assertEquals(1, agentIds.getValue().size());
-    assertEquals("MyScript", scriptName.getValue());
+    assertEquals("1234567890", scriptName.getValue());
     assertEquals(
-        "cwB3AGkAdABjAGgAIAAoACQAZQBuAHYAOgBQAFIATwBDAEUAUwBTAE8AUgBfAEEAUgBDAEgASQBUAEUAQwBUAFUAUgBFACkAIAB7ACAAIgBBAE0ARAA2ADQAIgAgAHsAJABhAHIAYwBoAGkAdABlAGMAdAB1AHIAZQAgAD0AIAAiAHgAOAA2AF8ANgA0ACIAOwAgAEIAcgBlAGEAawB9ACAAIgBBAFIATQA2ADQAIgAgAHsAJABhAHIAYwBoAGkAdABlAGMAdAB1AHIAZQAgAD0AIAAiAGEAcgBtADYANAAiADsAIABCAHIAZQBhAGsAfQAgACIAeAA4ADYAIgAgAHsAIABzAHcAaQB0AGMAaAAgACgAJABlAG4AdgA6AFAAUgBPAEMARQBTAFMATwBSAF8AQQBSAEMASABJAFQARQBXADYANAAzADIAKQAgAHsAIAAiAEEATQBEADYANAAiACAAewAkAGEAcgBjAGgAaQB0AGUAYwB0AHUAcgBlACAAPQAgACIAeAA4ADYAXwA2ADQAIgA7ACAAQgByAGUAYQBrAH0AIAAiAEEAUgBNADYANAAiACAAewAkAGEAcgBjAGgAaQB0AGUAYwB0AHUAcgBlACAAPQAgACIAYQByAG0ANgA0ACIAOwAgAEIAcgBlAGEAawB9ACAAfQAgAH0AIAB9ADsAJABhAGcAZQBuAHQASQBEAD0AWwBTAHkAcwB0AGUAbQAuAEIAaQB0AEMAbwBuAHYAZQByAHQAZQByAF0AOgA6AFQAbwBTAHQAcgBpAG4AZwAoACgAKABHAGUAdAAtAEkAdABlAG0AUAByAG8AcABlAHIAdAB5ACAAJwBIAEsATABNADoAXABTAFkAUwBUAEUATQBcAEMAdQByAHIAZQBuAHQAQwBvAG4AdAByAG8AbABTAGUAdABcAFMAZQByAHYAaQBjAGUAcwBcAEMAUwBBAGcAZQBuAHQAXABTAGkAbQAnACkALgBBAEcAKQApAC4AVABvAEwAbwB3AGUAcgAoACkAIAAtAHIAZQBwAGwAYQBjAGUAIAAnAC0AJwAsACcAJwA7ACQAYQByAGMAaABpAHQAZQBjAHQAdQByAGUAYAA=",
+        "JABhAGcAZQBuAHQASQBEAD0AJgAgACcAQwA6AFwAUAByAG8AZwByAGEAbQAgAEYAaQBsAGUAcwBcAFMAZQBuAHQAaQBuAGUAbABPAG4AZQBcAFMAZQBuAHQAaQBuAGUAbAAgAEEAZwBlAG4AdAAgACoAXABTAGUAbgB0AGkAbgBlAGwAQwB0AGwALgBlAHgAZQAnACAAYQBnAGUAbgB0AF8AaQBkADsAeAA4ADYAXwA2ADQA",
         commandEncoded.getValue());
   }
 }

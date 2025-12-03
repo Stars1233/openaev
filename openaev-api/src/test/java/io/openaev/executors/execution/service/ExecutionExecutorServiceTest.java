@@ -177,7 +177,7 @@ public class ExecutionExecutorServiceTest {
   }
 
   @Test
-  void test_saveCrowdstrikeAgentsErrorTraces() {
+  void test_saveCrowdstrikeSentineloneAgentsErrorTraces() {
     // Init datas
     Endpoint endpoint = EndpointFixture.createEndpoint();
     Agent agent = AgentFixture.createDefaultAgentSession();
@@ -185,7 +185,7 @@ public class ExecutionExecutorServiceTest {
     endpoint.setAgents(List.of(agent));
     InjectStatus injectStatus = InjectStatusFixture.createPendingInjectStatus();
     // Run method to test
-    executorService.saveCrowdstrikeAgentsErrorTraces(
+    executorService.saveAgentsErrorTraces(
         new Exception("EXCEPTION !!"), Set.of(agent), injectStatus);
     // Asserts
     ArgumentCaptor<List<ExecutionTrace>> executionTrace = ArgumentCaptor.forClass(List.class);
