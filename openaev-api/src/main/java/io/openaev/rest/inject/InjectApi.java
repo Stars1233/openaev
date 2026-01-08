@@ -14,7 +14,6 @@ import io.openaev.config.RabbitmqConfig;
 import io.openaev.database.model.*;
 import io.openaev.database.raw.RawDocument;
 import io.openaev.database.repository.ExerciseRepository;
-import io.openaev.database.repository.GrantRepository;
 import io.openaev.database.repository.InjectRepository;
 import io.openaev.database.repository.UserRepository;
 import io.openaev.database.specification.InjectSpecification;
@@ -488,11 +487,8 @@ public class InjectApi extends RestBehavior {
     List<Inject> injectsToDelete =
         getInjectsAndCheckInputForBulkProcessing(input, Grant.GRANT_TYPE.PLANNER);
 
-    // FIXME: This is a workaround to prevent the GUI from blocking when deleting elements
-    injectsToDelete.forEach(inject -> inject.setListened(false));
-
     // Bulk delete
-    this.injectService.deleteAll(injectsToDelete);
+    this.injectService.deleteAllByIds(injectsToDelete.stream().map(Inject::getId).toList());
     return injectsToDelete;
   }
 
