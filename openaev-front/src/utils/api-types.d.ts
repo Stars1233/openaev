@@ -3543,6 +3543,20 @@ export type InjectorContractBaseOutput = BaseInjectorContractBaseOutput &
       >
   );
 
+export interface InjectorContractDomainCountOutput {
+  /**
+   * Total number of observations linked to this domain
+   * @format int64
+   * @example 42
+   */
+  count: number;
+  /**
+   * The domain name extracted from OpenAEV
+   * @example "Endpoints"
+   */
+  domain: string;
+}
+
 export interface InjectorContractFullOutput {
   injector_contract_arch?: "x86_64" | "arm64" | "ALL_ARCHITECTURES";
   /** Attack pattern IDs */
