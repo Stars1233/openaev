@@ -3521,7 +3521,14 @@ export interface Injector {
   /** @format date-time */
   injector_created_at: string;
   injector_custom_contracts?: boolean;
-  injector_dependencies?: ("SMTP" | "IMAP" | "NUCLEI" | "NMAP")[];
+  injector_dependencies?: (
+    | "SMTP"
+    | "IMAP"
+    | "NUCLEI"
+    | "NMAP"
+    | "OpenAEV Email"
+    | "OpenAEV Implant"
+  )[];
   injector_executor_clear_commands?: Record<string, string>;
   injector_executor_commands?: Record<string, string>;
   injector_external?: boolean;
@@ -6238,10 +6245,13 @@ export interface TagRuleInput {
 export interface TagRuleOutput {
   /** Asset groups of the tag rule */
   asset_groups?: Record<string, string>;
+  protected?: boolean;
   /** Name of the tag associated with the tag rule */
   tag_name: string;
   /** ID of the tag rule */
   tag_rule_id: string;
+  /** The tag rule is protected and cannot change the associated tag or be deleted. */
+  tag_rule_protected: boolean;
 }
 
 export interface TagUpdateInput {
