@@ -213,7 +213,7 @@ public class InjectExpectationService {
         expectationsForPlayers,
         expectationForTeams,
         injectExpectation,
-        (score) -> buildForPlayerManualValidation(result, score));
+        score -> buildForPlayerManualValidation(result, score));
     return expectationForTeams;
   }
 
@@ -332,7 +332,7 @@ public class InjectExpectationService {
         updated,
         false,
         shouldPropagateLastInjectExpectationResult
-            ? (score) -> updated.getResults().getLast()
+            ? score -> updated.getResults().getLast()
             : null);
   }
 

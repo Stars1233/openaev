@@ -483,7 +483,8 @@ public class ScenarioInjectTestApiTest extends IntegrationTest {
       scenarioWrapper =
           scenarioComposer
               .forScenario(ScenarioFixture.getScenario())
-              .withInjects(List.of(injectComposer1, injectComposer2));
+              .withInjects(List.of(injectComposer1, injectComposer2))
+              .persist();
     }
 
     @Nested

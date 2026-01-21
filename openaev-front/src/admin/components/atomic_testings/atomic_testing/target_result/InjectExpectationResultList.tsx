@@ -21,6 +21,7 @@ import {
 import { isNotEmptyField } from '../../../../../utils/utils';
 import { type InjectExpectationsStore } from '../../../common/injects/expectations/Expectation';
 import InjectIcon from '../../../common/injects/InjectIcon';
+import { getSourceLabel } from '../../../simulations/simulation/validation/expectations/ExpectationUtils';
 import InjectExpectationContext from '../context/InjectExpectationContext';
 import TargetResultAlertNumber from './TargetResultAlertNumber';
 
@@ -109,7 +110,7 @@ const InjectExpectationResultList = ({
                   }}
                   >
                     {getAvatar(expectationResult)}
-                    {expectationResult.sourceName ? t(expectationResult.sourceName) : t('Unknown')}
+                    {getSourceLabel(expectationResult)}
                   </div>
                 </TableCell>
                 <TableCell>
