@@ -189,12 +189,12 @@ public interface RawScenario {
    *
    * @return the count of directly assigned users
    */
-  long getScenario_users_number();
+  Long getScenario_users_number();
 
   /**
    * Returns the total count of users across all teams in this scenario.
    *
    * @return the total user count
    */
-  long getScenario_all_users_number();
+  Long getScenario_all_users_number();
 }
