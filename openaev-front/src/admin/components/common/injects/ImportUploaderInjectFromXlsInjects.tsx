@@ -1,6 +1,14 @@
 import { zodResolver } from '@hookform/resolvers/zod';
 import { TableViewOutlined } from '@mui/icons-material';
-import { Alert, Autocomplete as MuiAutocomplete, Box, Button, MenuItem, TextField, Tooltip } from '@mui/material';
+import {
+  Alert, Autocomplete as MuiAutocomplete,
+  Box,
+  Button,
+  createFilterOptions,
+  MenuItem,
+  TextField,
+  Tooltip,
+} from '@mui/material';
 import { DateTimePicker } from '@mui/x-date-pickers';
 import { InformationOutline } from 'mdi-material-ui';
 import moment from 'moment-timezone';
@@ -10,7 +18,8 @@ import { makeStyles } from 'tss-react/mui';
 import { z } from 'zod';
 
 import { searchMappers } from '../../../../actions/mapper/mapper-actions';
-import { type Page } from '../../../../components/common/queryable/Page';
+import { initSorting, type Page } from '../../../../components/common/queryable/Page';
+import { buildSearchPagination } from '../../../../components/common/queryable/QueryableUtils';
 import { useFormatter } from '../../../../components/i18n';
 import {
   type ImportMapper,
@@ -58,6 +67,12 @@ interface Props {
   handleSubmit: (input: InjectsImportInput) => void;
 }
 
+interface MapperOption {
+  id: string;
+  label: string;
+  isHint: boolean;
+}
+
 const ImportUploaderInjectFromXlsInjects: FunctionComponent<Props> = ({
   sheets,
   importId,
@@ -100,19 +115,43 @@ const ImportUploaderInjectFromXlsInjects: FunctionComponent<Props> = ({
   });
 
   // Mapper
-  const [mappers, setMappers] = useState<ImportMapper[]>([]);
-  useEffect(() => {
-    searchMappers({ size: 10 }).then((result: { data: Page<ImportMapper> }) => {
+  const [mapperOptions, setMapperOptions] = useState<MapperOption[]>([]);
+  const [hintOptions, setHintOptions] = useState<MapperOption[]>([]);
+  const createFilterOptionsCustom = createFilterOptions<MapperOption>();
+
+  const onChangeSearchInput = (value: string) => {
+    searchMappers(buildSearchPagination({
+      sorts: initSorting('import_mapper_name'),
+      textSearch: value,
+      size: 10,
+    })).then((result: { data: Page<ImportMapper> }) => {
       const { data } = result;
-      setMappers(data.content);
+
+      const options: MapperOption[] = data.content.map(
+        m => ({
+          id: m.import_mapper_id,
+          label: m.import_mapper_name,
+          isHint: false,
+        }));
+
+      if (data.totalPages > 1) {
+        setHintOptions([
+          {
+            id: '__hint__',
+            label: t('More items are available — please type the mapper name'),
+            isHint: true,
+          },
+        ]);
+      } else {
+        setHintOptions([]);
+      }
+      setMapperOptions(options);
     });
+  };
+
+  useEffect(() => {
+    onChangeSearchInput('');
   }, []);
-  const mapperOptions = mappers.map(
-    m => ({
-      id: m.import_mapper_id,
-      label: m.import_mapper_name,
-    }),
-  );
 
   const onSubmitImportInjects = (values: FormProps) => {
     const input: InjectsImportInput = {
@@ -197,7 +236,6 @@ const ImportUploaderInjectFromXlsInjects: FunctionComponent<Props> = ({
       });
     }
   };
-
   return (
     <form id="importUploadInjectForm" onSubmit={handleSubmitWithoutPropagation}>
       <div className={classes.container}>
@@ -245,14 +283,51 @@ const ImportUploaderInjectFromXlsInjects: FunctionComponent<Props> = ({
                 onChange(v?.id);
                 checkNeedLaunchDate();
               }}
-              renderOption={(props, option) => (
-                <Box component="li" {...props} key={option.id}>
-                  <div className={classes.icon}>
-                    <TableViewOutlined color="primary" />
-                  </div>
-                  <div className={classes.text}>{option.label}</div>
-                </Box>
-              )}
+              onInputChange={(event, value) => {
+                onChangeSearchInput(value);
+              }}
+
+              filterOptions={(options, state) => {
+                const filtered = createFilterOptionsCustom(options, state);
+                hintOptions.forEach((hint) => {
+                  const alreadyIn = filtered.some(o => o.id === hint.id);
+                  if (!alreadyIn) {
+                    filtered.push(hint);
+                  }
+                });
+
+                return filtered;
+              }}
+
+              renderOption={(props, option) => {
+                if (option.isHint) {
+                  return (
+                    <Box
+                      component="li"
+                      {...props}
+                      key={option.id}
+                      sx={{
+                        fontStyle: 'italic',
+                        color: 'text.secondary',
+                        pointerEvents: 'none',
+                        padding: '8px 16px',
+                      }}
+                    >
+                      {option.label}
+                    </Box>
+                  );
+                } else {
+                  return (
+                    <Box component="li" {...props} key={option.id}>
+                      <div className={classes.icon}>
+                        <TableViewOutlined color="primary" />
+                      </div>
+                      <div className={classes.text}>{option.label}</div>
+                    </Box>
+                  );
+                }
+              }}
+
               getOptionLabel={option => option.label}
               isOptionEqualToValue={(option, v) => option.id === v.id}
               renderInput={params => (
